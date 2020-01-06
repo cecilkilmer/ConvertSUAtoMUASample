@@ -41,17 +41,17 @@ namespace UserFolderSample
         {
             Frame rootFrame = Window.Current.Content as Frame;
 
-            IAsyncOperation<IReadOnlyList<Windows.System.User>> UserListOperation = Windows.System.User.FindAllAsync();
+            IAsyncOperation<IReadOnlyList<Windows.System.User>> UserListOperation = SpinWait(Windows.System.User.FindAllAsync());
             IReadOnlyList<Windows.System.User> UserList = UserListOperation.GetResults();
             int UserCount = UserList.Count;
             foreach (var user in UserList)
             {
-                var FirstNameAsync = user.GetPropertyAsync("FirstName");
+                var FirstNameAsync = SpinWait(user.GetPropertyAsync("FirstName"));
                 var FirstName = FirstNameAsync.GetResults();
                 System.Diagnostics.Debug.WriteLine(FirstName + "\n");
 
                 var localFolder = Windows.Storage.ApplicationData.Current.LocalFolder;
-                var dataFile = localFolder.CreateFileAsync("dataFile.txt", Windows.Storage.CreationCollisionOption.ReplaceExisting);
+                var dataFile = SpinWait(localFolder.CreateFileAsync("dataFile.txt", Windows.Storage.CreationCollisionOption.ReplaceExisting));
 
                 // This should be await, but it's not an async method
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -113,6 +113,18 @@ namespace UserFolderSample
             SuspendingDeferral deferral = e.SuspendingOperation.GetDeferral();
             //TODO: Save application state and stop any background activity
             deferral.Complete();
+        }
+
+        /// <summary>
+        /// Spin wait for async operation to complete.
+        /// </summary>
+        /// <typeparam name="T">Operation type.</typeparam>
+        /// <param name="operation">Operation to wait for.</param>
+        /// <returns>Operation passed in (convenience).</returns>
+        static private IAsyncOperation<T> SpinWait<T>(IAsyncOperation<T> operation)
+        {
+            while (operation.Status == AsyncStatus.Started) { }
+            return operation;
         }
     }
 }
